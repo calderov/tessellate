@@ -1,18 +1,27 @@
+import cv2
+import numpy
 import random
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFilter
 
-def extract_points_from_edges(edges, luminanceThreshold):
+def extractPointsFromEdges(image, minThreshold = 100, maxThreshold = 200):
+	# Transform the image to a format compatible with OpenCV
+	cvImage = numpy.array(image)
+
+	# Extract the edges from the image
+	edges = cv2.Canny(cvImage, minThreshold, maxThreshold)
+
+	# Extract data points from the edges
 	points = []
-	maxX, maxY = edges.size
-	for x in range(maxX):
-		for y in range(maxY):
-			if edges.getpixel((x, y)) > luminanceThreshold:
+	cols, rows = image.size
+	for x in range(cols):
+		for y in range(rows):
+			if edges[y][x] == 255:
 				points.append((x, y))
 	return points
 
-def paint_points_to_image(points, size):
+def paintPointsToImage(points, size):
 	image = Image.new('L', size)
 	for point in points:
 		image.putpixel(point, 255)
@@ -103,19 +112,13 @@ def paintSections(originalImage, sections):
 
 	return image
 	
-def tessellate(inputPath, outputPath, luminanceThreshold = 128, pointsCountThreshold = 10):
+def tessellate(inputPath, outputPath, cannyMinThreshold = 100, cannyMaxThreshold = 200, pointsCountThreshold = 10):
 	print("Load original image\n")
 	image = Image.open(inputPath)
 
-	print("Find the edges from the grayscale version of the image\n")
-	edges = image.convert('L').filter(ImageFilter.FIND_EDGES)
-	edges.show()
-
-	print("Create a data structure of points with those pixels")
-	print("from the edges that are above the luminance threshold\n")
-	points = extract_points_from_edges(edges, luminanceThreshold)
-
-	pointedImage = paint_points_to_image(points, image.size)
+	print("Extract data points from image edges")
+	points = extractPointsFromEdges(image, cannyMinThreshold, cannyMaxThreshold)
+	pointedImage = paintPointsToImage(points, image.size)
 	pointedImage.show()
 
 	print("Get a list of the sections that tessellate the image [(topLeft, bottomRight), ...]\n")
